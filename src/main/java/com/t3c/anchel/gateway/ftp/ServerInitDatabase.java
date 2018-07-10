@@ -21,9 +21,9 @@ import org.waarp.common.database.exception.WaarpDatabaseNoConnectionException;
 import org.waarp.common.file.filesystembased.FilesystemBasedFileParameterImpl;
 import org.waarp.common.logging.WaarpLogger;
 import org.waarp.common.logging.WaarpLoggerFactory;
-import org.waarp.common.logging.WaarpSlf4JLoggerFactory;
 import org.waarp.ftp.core.utils.FtpChannelUtils;
 
+import com.t3c.anchel.AnchelSlf4jLoggerFactory;
 import com.t3c.anchel.gateway.ftp.config.FileBasedConfiguration;
 import com.t3c.anchel.gateway.ftp.control.ExecBusinessHandler;
 import com.t3c.anchel.gateway.ftp.data.FileSystemBasedDataBusinessHandler;
@@ -36,84 +36,80 @@ import com.t3c.anchel.gateway.ftp.database.DbConstant;
  * 
  */
 public class ServerInitDatabase {
-    /**
-     * Internal Logger
-     */
-    static volatile WaarpLogger logger;
+	/**
+	 * Internal Logger
+	 */
+	static volatile WaarpLogger logger;
 
-    static String sxml = null;
-    static boolean database = false;
+	static String sxml = null;
+	static boolean database = false;
 
-    protected static boolean getParams(String[] args) {
-        if (args.length < 1) {
-            logger.error("Need at least the configuration file as first argument then optionally\n"
-                    +
-                    "    -initdb");
-            return false;
-        }
-        sxml = args[0];
-        for (int i = 1; i < args.length; i++) {
-            if (args[i].equalsIgnoreCase("-initdb")) {
-                database = true;
-            }
-        }
-        return true;
-    }
+	protected static boolean getParams(String[] args) {
+		if (args.length < 1) {
+			logger.error("Need at least the configuration file as first argument then optionally\n" + "    -initdb");
+			return false;
+		}
+		sxml = args[0];
+		for (int i = 1; i < args.length; i++) {
+			if (args[i].equalsIgnoreCase("-initdb")) {
+				database = true;
+			}
+		}
+		return true;
+	}
 
-    /**
-     * @param args
-     *            as config_database file [rules_directory host_authent limit_configuration]
-     */
-    public static void initGatewayDB(String[] args) {
-        WaarpLoggerFactory.setDefaultFactory(new WaarpSlf4JLoggerFactory(null));
-        if (logger == null) {
-            logger = WaarpLoggerFactory.getLogger(ServerInitDatabase.class);
-        }
-        if (!getParams(args)) {
-            logger.error("Need at least the configuration file as first argument then optionally\n"
-                    +
-                    "    -initdb");
-            if (DbConstant.gatewayAdmin != null && DbConstant.gatewayAdmin.isActive()) {
-                DbConstant.gatewayAdmin.close();
-            }
-            FtpChannelUtils.stopLogger();
-            System.exit(1);
-        }
-        FileBasedConfiguration configuration = new FileBasedConfiguration(
-                ExecGatewayFtpServer.class, ExecBusinessHandler.class,
-                FileSystemBasedDataBusinessHandler.class,
-                new FilesystemBasedFileParameterImpl());
-        try {
-            if (!configuration.setConfigurationServerFromXml(args[0])) {
-                System.err.println("Bad main configuration");
-                if (DbConstant.gatewayAdmin != null) {
-                    DbConstant.gatewayAdmin.close();
-                }
-                FtpChannelUtils.stopLogger();
-                System.exit(1);
-                return;
-            }
-            if (database) {
-                // Init database
-                try {
-                    initdb();
-                } catch (WaarpDatabaseNoConnectionException e) {
-                    logger.error("Cannot connect to database");
-                    return;
-                }
-                System.out.println("End creation");
-            }
-            System.out.println("Load done");
-        } finally {
-            if (DbConstant.gatewayAdmin != null) {
-                DbConstant.gatewayAdmin.close();
-            }
-        }
-    }
+	/**
+	 * @param args
+	 *            as config_database file [rules_directory host_authent
+	 *            limit_configuration]
+	 */
+	public static void initGatewayDB(String[] args) {
+		WaarpLoggerFactory.setDefaultFactory(new AnchelSlf4jLoggerFactory(null));
+		if (logger == null) {
+			logger = WaarpLoggerFactory.getLogger(ServerInitDatabase.class);
+		}
+		if (!getParams(args)) {
+			logger.error("Need at least the configuration file as first argument then optionally\n" + "    -initdb");
+			if (DbConstant.gatewayAdmin != null && DbConstant.gatewayAdmin.isActive()) {
+				DbConstant.gatewayAdmin.close();
+			}
+			FtpChannelUtils.stopLogger();
+			System.exit(1);
+		}
+		FileBasedConfiguration configuration = new FileBasedConfiguration(ExecGatewayFtpServer.class,
+				ExecBusinessHandler.class, FileSystemBasedDataBusinessHandler.class,
+				new FilesystemBasedFileParameterImpl());
+		try {
+			if (!configuration.setConfigurationServerFromXml(args[0])) {
+				System.err.println("Bad main configuration");
+				if (DbConstant.gatewayAdmin != null) {
+					DbConstant.gatewayAdmin.close();
+				}
+				FtpChannelUtils.stopLogger();
+				System.exit(1);
+				return;
+			}
+			if (database) {
+				// Init database
+				try {
+					initdb();
+				} catch (WaarpDatabaseNoConnectionException e) {
+					logger.error("Cannot connect to database");
+					return;
+				}
+				System.out.println("End creation");
+			}
+			System.out.println("Load done");
+		} finally {
+			if (DbConstant.gatewayAdmin != null) {
+				DbConstant.gatewayAdmin.close();
+			}
+		}
+	}
 
-    public static void initdb() throws WaarpDatabaseNoConnectionException {
-        // Create tables: configuration, hosts, rules, runner, cptrunner
-        DbConstant.gatewayAdmin.getDbModel().createTables(DbConstant.gatewayAdmin.getSession());
-    }
+	public static void initdb() throws WaarpDatabaseNoConnectionException {
+		// Create tables: configuration, hosts, rules, runner, cptrunner
+		DbConstant.gatewayAdmin.getDbModel().createTables(DbConstant.gatewayAdmin.getSession());
+	}
 
 }
